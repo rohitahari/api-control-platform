@@ -36,3 +36,7 @@ def require_project_permission(
         raise HTTPException(status_code=403, detail="Permission denied")
 
     return membership
+
+
+
+# RBAC permission mapping centralized in one place
