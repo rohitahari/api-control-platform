@@ -43,9 +43,13 @@ def create_task(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    membership = get_membership(project_id, current_user.id, db)
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a project member")
+    require_project_permission(
+    project_id=project_id,
+    user_id=current_user.id,
+    action="create_task",
+    db=db
+)
+
 
     if priority not in [p.value for p in TaskPriority]:
         raise HTTPException(status_code=400, detail="Invalid priority")
@@ -139,19 +143,24 @@ def delete_task(
 
     return {"detail": "Task deleted"}
 
-@router.put("/{project_id}/tasks/{task_id}")
+@router.patch("/{project_id}/tasks/{task_id}")
 def update_task(
     project_id: int,
     task_id: int,
     title: str | None = None,
+    description: str | None = None,
     status: str | None = None,
     priority: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    membership = get_membership(project_id, current_user.id, db)
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a project member")
+    require_project_permission(
+        project_id=project_id,
+        user_id=current_user.id,
+        action="update_task",
+        db=db,
+        resource_id=task_id
+    )
 
     task = db.query(Task).filter(
         Task.id == task_id,
@@ -160,73 +169,6 @@ def update_task(
 
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-
-    # MEMBER can only update their own tasks
-    if membership.role == ProjectRole.MEMBER.value:
-        if task.created_by != current_user.id:
-            raise HTTPException(status_code=403, detail="Members can only update their own tasks")
-
-    # Validate enums
-    if status and status not in [s.value for s in TaskStatus]:
-        raise HTTPException(status_code=400, detail="Invalid status")
-
-    if priority and priority not in [p.value for p in TaskPriority]:
-        raise HTTPException(status_code=400, detail="Invalid priority")
-
-    if title:
-        task.title = title
-    if status:
-        task.status = status
-    if priority:
-        task.priority = priority
-
-    db.commit()
-    db.refresh(task)
-
-    return {
-        "task_id": task.id,
-        "title": task.title,
-        "status": task.status,
-        "priority": task.priority
-    }
-
-from typing import Optional
-
-@router.patch("/{project_id}/tasks/{task_id}")
-def update_task(
-    project_id: int,
-    task_id: int,
-    title: Optional[str] = None,
-    description: Optional[str] = None,
-    status: Optional[str] = None,
-    priority: Optional[str] = None,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    membership = get_membership(project_id, current_user.id, db)
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a project member")
-
-    task = db.query(Task).filter(
-        Task.id == task_id,
-        Task.project_id == project_id
-    ).first()
-
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-
-    # MEMBER can only update their own tasks
-    if membership.role == ProjectRole.MEMBER.value:
-        if task.created_by != current_user.id:
-            raise HTTPException(status_code=403, detail="Members can only update their own tasks")
-
-    # Validate status
-    if status and status not in [s.value for s in TaskStatus]:
-        raise HTTPException(status_code=400, detail="Invalid status")
-
-    # Validate priority
-    if priority and priority not in [p.value for p in TaskPriority]:
-        raise HTTPException(status_code=400, detail="Invalid priority")
 
     if title:
         task.title = title
@@ -254,11 +196,12 @@ def delete_task(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    membership = get_membership(project_id, current_user.id, db)
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a project member")
-  
-    require_project_permission(project_id=project_id, user_id=current_user.id, action="delete_task", db=db)
+    require_project_permission(
+        project_id=project_id,
+        user_id=current_user.id,
+        action="delete_task",
+        db=db
+    )
 
     task = db.query(Task).filter(
         Task.id == task_id,
