@@ -88,9 +88,7 @@ def list_tasks(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    membership = get_membership(project_id, current_user.id, db)
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a project member")
+    
 
     query = db.query(Task).filter(
         Task.project_id == project_id
@@ -124,11 +122,8 @@ def delete_task(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    membership = get_membership(project_id, current_user.id, db)
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a project member")
-    if not has_permission("delete_task",membership.role):
-        raise HTTPException(status_code=403, detail="Not allowed to delete task")
+   
+    
 
     task = db.query(Task).filter(
         Task.id == task_id,
@@ -154,13 +149,7 @@ def update_task(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    require_project_permission(
-        project_id=project_id,
-        user_id=current_user.id,
-        action="update_task",
-        db=db,
-        resource_id=task_id
-    )
+   
 
     task = db.query(Task).filter(
         Task.id == task_id,
@@ -215,3 +204,5 @@ def delete_task(
     db.commit()
 
     return {"detail": "Task deleted"}
+
+# test commit 2

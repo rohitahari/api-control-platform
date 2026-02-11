@@ -1,12 +1,10 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-
 from app.db.models.project_member import ProjectMember
 from app.db.models.task import Task
 from app.utils.enums import ProjectRole
 
 
-# Centralized permission mapping (RBAC layer)
 permission_map = {
     "delete_task": [ProjectRole.OWNER.value, ProjectRole.ADMIN.value],
     "create_task": [ProjectRole.OWNER.value, ProjectRole.ADMIN.value, ProjectRole.MEMBER.value],
@@ -40,7 +38,7 @@ def require_project_permission(
     if allowed_roles and membership.role not in allowed_roles:
         raise HTTPException(status_code=403, detail="Permission denied")
 
-    # 🔥 ABAC layer: additional attribute rule
+    # ABAC condition for update_task
     if action == "update_task" and membership.role == ProjectRole.MEMBER.value:
         task = db.query(Task).filter(
             Task.id == resource_id,
@@ -56,9 +54,8 @@ def require_project_permission(
                 detail="Members can only update their own tasks"
             )
 
-    print(f"[POLICY] {action} checked for user {user_id}")
-
     return membership
+
 
 
 
