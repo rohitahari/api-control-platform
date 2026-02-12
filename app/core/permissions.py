@@ -8,9 +8,8 @@ from app.utils.enums import ProjectRole
 permission_map = {
     "delete_task": [ProjectRole.OWNER.value, ProjectRole.ADMIN.value],
     "create_task": [ProjectRole.OWNER.value, ProjectRole.ADMIN.value, ProjectRole.MEMBER.value],
-    "add_member": [ProjectRole.OWNER.value],
-    "delete_project": [ProjectRole.OWNER.value],
     "update_task": [ProjectRole.OWNER.value, ProjectRole.ADMIN.value, ProjectRole.MEMBER.value],
+    "delete_project": [ProjectRole.OWNER.value],
 }
 
 
@@ -38,7 +37,6 @@ def require_project_permission(
     if allowed_roles and membership.role not in allowed_roles:
         raise HTTPException(status_code=403, detail="Permission denied")
 
-    # ABAC condition for update_task
     if action == "update_task" and membership.role == ProjectRole.MEMBER.value:
         task = db.query(Task).filter(
             Task.id == resource_id,
@@ -56,18 +54,3 @@ def require_project_permission(
 
     return membership
 
-
-
-
-
-# TOD:integrate audit loggin here
-
-
-# test  change 1
-
-
-
-# cycle 3 test change
-
-
-# cycle 4 test change   

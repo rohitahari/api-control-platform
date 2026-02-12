@@ -26,6 +26,8 @@ def create_project(
     db.commit()
     db.refresh(project)
 
+    
+
     # Assign OWNER role to creator
     membership = ProjectMember(
         user_id=current_user.id,
@@ -229,13 +231,19 @@ def delete_project(
         raise HTTPException(status_code=404, detail="Project not found")
 
     # 2️⃣ Check membership
-    membership = db.query(ProjectMember).filter(
+    existing_membership = db.query(ProjectMember).filter(
         ProjectMember.project_id == project_id,
         ProjectMember.user_id == current_user.id
     ).first()
 
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a project member")
+    if not existing_membership:
+        membership =ProjectMember(
+            user_id=current_user.id,
+            project_id=project_id,
+            role=ProjectRole.MEMBER.value
+        )
+        db.add(membership)
+        db.commit()
 
     # 3️⃣ Only OWNER can delete
     if membership.role != ProjectRole.OWNER.value:
@@ -291,4 +299,4 @@ def delete_project(
         target_id=project.id
     )   
     db.add(audit)
-    db.commit()
+    db.commit()  

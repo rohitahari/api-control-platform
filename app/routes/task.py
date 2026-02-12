@@ -24,7 +24,6 @@ def get_membership(project_id: int, user_id: int, db: Session):
         ProjectMember.user_id == user_id
     ).first()
 
-
 @router.post("/{project_id}/tasks")
 def create_task(
     project_id: int,
@@ -35,25 +34,13 @@ def create_task(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    project = db.query(Project).filter(
-        Project.id == project_id,
-        Project.is_deleted == False
-    ).first()
-
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
 
     require_project_permission(
-    project_id=project_id,
-    user_id=current_user.id,
-    action="create_task",
-    db=db
-)
-
-
-    if priority not in [p.value for p in TaskPriority]:
-        raise HTTPException(status_code=400, detail="Invalid priority")
-    require_project_permission(project_id=project_id, user_id=current_user.id, action="create_task", db=db)
+        project_id=project_id,
+        user_id=current_user.id,
+        action="create_task",
+        db=db
+    )
 
     task = Task(
         project_id=project_id,
@@ -71,9 +58,10 @@ def create_task(
     return {
         "task_id": task.id,
         "title": task.title,
-        "priority": task.priority,
-        "created_by": current_user.email
+        "priority": task.priority
     }
+
+
 
 
 from typing import Optional
@@ -122,6 +110,15 @@ def delete_task(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    
+    require_project_permission(
+        project_id=project_id,
+        user_id=current_user.id,
+        action="update_task",
+        db=db,
+        resource_id=task_id
+    )
+   
    
     
 
@@ -149,6 +146,14 @@ def update_task(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    
+    require_project_permission(
+        project_id=project_id,
+        user_id=current_user.id,
+        action="update_task",
+        db=db,
+        resource_id=task_id
+    )
    
 
     task = db.query(Task).filter(
@@ -159,14 +164,6 @@ def update_task(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    if title:
-        task.title = title
-    if description:
-        task.description = description
-    if status:
-        task.status = status
-    if priority:
-        task.priority = priority
 
     db.commit()
     db.refresh(task)
@@ -190,6 +187,7 @@ def delete_task(
         user_id=current_user.id,
         action="delete_task",
         db=db
+       
     )
 
     task = db.query(Task).filter(
