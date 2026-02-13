@@ -1,18 +1,37 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
+
 from app.db.models.project_member import ProjectMember
 from app.db.models.task import Task
 from app.utils.enums import ProjectRole
 
 
 permission_map = {
-    "delete_task": [ProjectRole.OWNER.value, ProjectRole.ADMIN.value],
-    "create_task": [ProjectRole.OWNER.value, ProjectRole.ADMIN.value, ProjectRole.MEMBER.value],
-    "update_task": [ProjectRole.OWNER.value, ProjectRole.ADMIN.value, ProjectRole.MEMBER.value],
-    "add_member": [ProjectRole.OWNER.value, ProjectRole.ADMIN.value],
-    "delete_project": [ProjectRole.OWNER.value],
+    "create_task": [
+        ProjectRole.OWNER.value,
+        ProjectRole.ADMIN.value,
+        ProjectRole.MEMBER.value
+    ],
+    "update_task": [
+        ProjectRole.OWNER.value,
+        ProjectRole.ADMIN.value,
+        ProjectRole.MEMBER.value
+    ],
+    "delete_task": [
+        ProjectRole.OWNER.value,
+        ProjectRole.ADMIN.value
+    ],
+    "delete_project": [
+        ProjectRole.OWNER.value
+    ],
+    "add_member": [
+        ProjectRole.OWNER.value
+    ],
 }
 
+
+
+# Membership Lookup
 
 def get_membership(project_id: int, user_id: int, db: Session):
     return db.query(ProjectMember).filter(
@@ -21,16 +40,35 @@ def get_membership(project_id: int, user_id: int, db: Session):
     ).first()
 
 
+
+
+# Role Validation (RBAC)
+
 def validate_role(action: str, membership):
     allowed_roles = permission_map.get(action)
 
-    if allowed_roles and membership.role not in allowed_roles:
+    if not allowed_roles:
+        raise HTTPException(status_code=400, detail="Invalid action")
+
+    if membership.role not in allowed_roles:
         raise HTTPException(status_code=403, detail="Permission denied")
 
 
-def validate_attributes(action: str, membership, project_id: int, user_id: int, db: Session, resource_id: int | None):
-    # ABAC for update_task
+
+
+# Attribute Validation (ABAC Layer)
+
+def validate_attributes(
+    action: str,
+    membership,
+    project_id: int,
+    user_id: int,
+    db: Session,
+    resource_id: int | None
+):
+    # MEMBER can only update their own tasks
     if action == "update_task" and membership.role == ProjectRole.MEMBER.value:
+
         task = db.query(Task).filter(
             Task.id == resource_id,
             Task.project_id == project_id
@@ -53,12 +91,23 @@ def enforce_policy(
     db: Session,
     resource_id: int | None = None
 ):
+    # 1️⃣ Membership check
     membership = get_membership(project_id, user_id, db)
 
     if not membership:
         raise HTTPException(status_code=403, detail="Not a project member")
 
+    # 2️⃣ RBAC
     validate_role(action, membership)
-    validate_attributes(action, membership, project_id, user_id, db, resource_id)
+
+    # 3️⃣ ABAC
+    validate_attributes(
+        action,
+        membership,
+        project_id,
+        user_id,
+        db,
+        resource_id
+    )
 
     return membership

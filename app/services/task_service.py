@@ -24,13 +24,7 @@ def create_task(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # 2️⃣ Permission enforcement
-    require_project_permission(
-        project_id=project_id,
-        user_id=user_id,
-        action="create_task",
-        db=db
-    )
+   
 
     # 3️⃣ Validate priority
     if priority not in [p.value for p in TaskPriority]:

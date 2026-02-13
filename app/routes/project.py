@@ -229,6 +229,9 @@ def delete_project(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    
+   
+
     # 1️⃣ Check project exists and not deleted
     project = db.query(Project).filter(
         Project.id == project_id,
