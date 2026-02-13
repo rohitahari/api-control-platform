@@ -92,18 +92,9 @@ def add_project_member(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # 2️⃣ Check current user membership
-    membership = db.query(ProjectMember).filter(
-        ProjectMember.project_id == project_id,
-        ProjectMember.user_id == current_user.id
-    ).first()
-
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a project member")
 
     # 3️⃣ Only OWNER can add members
-    if membership.role != ProjectRole.OWNER.value:
-        raise HTTPException(status_code=403, detail="Only OWNER can add members")
+
 
     # 4️⃣ Validate role assignment (strict RBAC)
     allowed_roles = [
@@ -165,17 +156,7 @@ def delete_project(
         raise HTTPException(status_code=404, detail="Project not found")
 
     # 2️⃣ Check membership
-    membership = db.query(ProjectMember).filter(
-        ProjectMember.project_id == project_id,
-        ProjectMember.user_id == current_user.id
-    ).first()
-
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a project member")
-
-    # 3️⃣ Only OWNER can delete
-    if not has_permission("add_member",membership.role):
-        raise HTTPException(status_code=403, detail="Only OWNER can delete project")
+   
 
     # 4️⃣ Soft delete
     project.is_deleted = True
@@ -198,17 +179,7 @@ def delete_project(
         raise HTTPException(status_code=404, detail="Project not found")
 
     # 2️⃣ Check membership
-    membership = db.query(ProjectMember).filter(
-        ProjectMember.project_id == project_id,
-        ProjectMember.user_id == current_user.id
-    ).first()
-
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a project member")
-
-    # 3️⃣ Only OWNER can delete
-    if membership.role != ProjectRole.OWNER.value:
-        raise HTTPException(status_code=403, detail="Only OWNER can delete project")
+   
 
     # 4️⃣ Soft delete
     project.is_deleted = True
@@ -222,11 +193,7 @@ def delete_project(
     current_user: User = Depends(get_current_user)
 ):
     # 1️⃣ Check project exists and not deleted
-    project = db.query(Project).filter(
-        Project.id == project_id,
-        Project.is_deleted == False
-    ).first()
-
+  
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -246,8 +213,7 @@ def delete_project(
         db.commit()
 
     # 3️⃣ Only OWNER can delete
-    if membership.role != ProjectRole.OWNER.value:
-        raise HTTPException(status_code=403, detail="Only OWNER can delete project")
+    
 
     # 4️⃣ Soft delete
     project.is_deleted = True
@@ -273,18 +239,7 @@ def delete_project(
         raise HTTPException(status_code=404, detail="Project not found")
 
     # 2️⃣ Check membership
-    membership = db.query(ProjectMember).filter(
-        ProjectMember.project_id == project_id,
-        ProjectMember.user_id == current_user.id
-    ).first()
-
-    if not membership:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    # 3️⃣ Only OWNER can delete
-    if membership.role != ProjectRole.OWNER.value:
-        raise HTTPException(status_code=403, detail="Not authorized")
-
+    
     # 4️⃣ Soft delete
     project.is_deleted = True
     db.commit()

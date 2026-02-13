@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
-
+from app.core.permissions import enforce_policy
+from app.services import task_service
 
 from app.db.session import get_db
 from app.db.models.task import Task
@@ -11,7 +12,6 @@ from app.db.models.user import User
 from app.core.security import get_current_user
 from app.utils.enums import ProjectRole, TaskStatus, TaskPriority
 
-from app.core.permissions import require_project_permission
 
 
 
@@ -35,30 +35,23 @@ def create_task(
     current_user: User = Depends(get_current_user)
 ):
 
-    require_project_permission(
+    task = task_service.create_task(
         project_id=project_id,
         user_id=current_user.id,
-        action="create_task",
-        db=db
-    )
-
-    task = Task(
-        project_id=project_id,
-        created_by=current_user.id,
         title=title,
         description=description,
         priority=priority,
-        due_date=due_date
+        due_date=due_date,
+        db=db
     )
 
-    db.add(task)
-    db.commit()
-    db.refresh(task)
+    
 
     return {
         "task_id": task.id,
         "title": task.title,
-        "priority": task.priority
+        "priority": task.priority,
+        "created_by": current_user.email
     }
 
 
@@ -110,17 +103,13 @@ def delete_task(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    
-    require_project_permission(
+    enforce_policy(
+        action="delete_task",
         project_id=project_id,
         user_id=current_user.id,
-        action="update_task",
         db=db,
         resource_id=task_id
     )
-   
-   
-    
 
     task = db.query(Task).filter(
         Task.id == task_id,
@@ -145,12 +134,12 @@ def update_task(
     priority: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
-):
+):  
     
-    require_project_permission(
+    enforce_policy(
+        action="update_task",
         project_id=project_id,
         user_id=current_user.id,
-        action="update_task",
         db=db,
         resource_id=task_id
     )
@@ -160,6 +149,7 @@ def update_task(
         Task.id == task_id,
         Task.project_id == project_id
     ).first()
+    
 
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -174,6 +164,11 @@ def update_task(
         "status": task.status,
         "priority": task.priority
     }
+   
+
+    
+
+    
 
 @router.delete("/{project_id}/tasks/{task_id}")
 def delete_task(
@@ -182,12 +177,12 @@ def delete_task(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    require_project_permission(
+    enforce_policy(
+        action="delete_task",
         project_id=project_id,
         user_id=current_user.id,
-        action="delete_task",
-        db=db
-       
+        db=db,
+        resource_id=task_id
     )
 
     task = db.query(Task).filter(
