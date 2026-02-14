@@ -1,14 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-
 from app.db.session import get_db
-from app.db.models.project import Project
-from app.db.models.project_member import ProjectMember
 from app.db.models.user import User
+from app.db.models.project import Project
 from app.core.security import get_current_user
-from app.utils.enums import ProjectRole
-from app.db.models.audit_log import AuditLog
-
+from app.services import project_service
+from app.core.permissions import enforce_policy
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
@@ -20,208 +17,81 @@ def create_project(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # Create project
-    project = Project(name=name, description=description)
-    db.add(project)
-    db.commit()
-    db.refresh(project)
-
-    
-
-    # Assign OWNER role to creator
-    membership = ProjectMember(
+    return project_service.create_project(
+        name=name,
+        description=description,
         user_id=current_user.id,
-        project_id=project.id,
-        role=ProjectRole.OWNER.value
+        db=db
     )
 
-    db.add(membership)
-    db.commit()
 
-    audit = AuditLog(
+@router.get("/{project_id}")
+def get_project(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    enforce_policy(
+        action="update_project",   # membership check only
+        project_id=project_id,
         user_id=current_user.id,
-        action="CREATE_PROJECT",
-        target_type="PROJECT",
-        target_id=project.id
+        db=db
     )
-    db.add(audit)
-    db.commit()
+
+    project = db.query(Project).filter(
+        Project.id == project_id,
+        Project.is_deleted == False
+    ).first()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
 
     return {
         "project_id": project.id,
         "name": project.name,
-        "owner": current_user.email
+        "description": project.description
     }
 
 
-@router.get("/")
-def list_my_projects(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    memberships = db.query(ProjectMember).filter(
-        ProjectMember.user_id == current_user.id
-    ).all()
-
-    result = []
-    for m in memberships:
-        if not m.project.is_deleted:
-            result.append({
-                "project_id": m.project.id,
-                "name": m.project.name,
-                "role": m.role
-            })
-
-    return result
-
-
-@router.post("/{project_id}/members")
-def add_project_member(
+@router.patch("/{project_id}")
+def update_project(
     project_id: int,
-    user_email: str,
-    role: str,
+    name: str | None = None,
+    description: str | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # 1️⃣ Check project exists
-    project = db.query(Project).filter(
-        Project.id == project_id,
-        Project.is_deleted == False
-    ).first()
-
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-
-    # 3️⃣ Only OWNER can add members
-
-
-    # 4️⃣ Validate role assignment (strict RBAC)
-    allowed_roles = [
-        ProjectRole.ADMIN.value,
-        ProjectRole.MEMBER.value
-    ]
-
-    if role not in allowed_roles:
-        raise HTTPException(status_code=400, detail="Invalid role assignment")
-
-    # 5️⃣ Find user to add
-    user_to_add = db.query(User).filter(
-        User.email == user_email
-    ).first()
-
-    if not user_to_add:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    # 6️⃣ Prevent duplicate membership
-    existing = db.query(ProjectMember).filter(
-        ProjectMember.project_id == project_id,
-        ProjectMember.user_id == user_to_add.id
-    ).first()
-
-    if existing:
-        raise HTTPException(status_code=400, detail="User already a member")
-
-    # 7️⃣ Add membership
-    new_membership = ProjectMember(
-        user_id=user_to_add.id,
+    enforce_policy(
+        action="update_project",
         project_id=project_id,
-        role=role
+        user_id=current_user.id,
+        db=db
     )
 
-    db.add(new_membership)
+    project = db.query(Project).filter(
+        Project.id == project_id,
+        Project.is_deleted == False
+    ).first()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if name:
+        project.name = name
+
+    if description:
+        project.description = description
+
     db.commit()
+    db.refresh(project)
 
     return {
-        "message": "Member added successfully",
-        "project_id": project_id,
-        "user": user_email,
-        "role": role
+        "project_id": project.id,
+        "name": project.name,
+        "description": project.description
     }
 
 
-@router.delete("/{project_id}")
-def delete_project(
-    project_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    # 1️⃣ Check project exists
-    project = db.query(Project).filter(
-        Project.id == project_id,
-        Project.is_deleted == False
-    ).first()
-
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    # 2️⃣ Check membership
-   
-
-    # 4️⃣ Soft delete
-    project.is_deleted = True
-    db.commit()
-
-    return {"message": "Project deleted successfully"}
-@router.delete("/{project_id}")
-def delete_project(
-    project_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    # 1️⃣ Check project exists and not deleted
-    project = db.query(Project).filter(
-        Project.id == project_id,
-        Project.is_deleted == False
-    ).first()
-
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    # 2️⃣ Check membership
-   
-
-    # 4️⃣ Soft delete
-    project.is_deleted = True
-    db.commit()
-
-    return {"message": "Project deleted successfully"}
-@router.delete("/{project_id}")
-def delete_project(
-    project_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    # 1️⃣ Check project exists and not deleted
-  
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    # 2️⃣ Check membership
-    existing_membership = db.query(ProjectMember).filter(
-        ProjectMember.project_id == project_id,
-        ProjectMember.user_id == current_user.id
-    ).first()
-
-    if not existing_membership:
-        membership =ProjectMember(
-            user_id=current_user.id,
-            project_id=project_id,
-            role=ProjectRole.MEMBER.value
-        )
-        db.add(membership)
-        db.commit()
-
-    # 3️⃣ Only OWNER can delete
-    
-
-    # 4️⃣ Soft delete
-    project.is_deleted = True
-    db.commit()
-
-    return {"message": "Project deleted successfully"}
-
-
 
 @router.delete("/{project_id}")
 def delete_project(
@@ -229,32 +99,8 @@ def delete_project(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    
-   
-
-    # 1️⃣ Check project exists and not deleted
-    project = db.query(Project).filter(
-        Project.id == project_id,
-        Project.is_deleted == False
-    ).first()
-
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    # 2️⃣ Check membership
-    
-    # 4️⃣ Soft delete
-    project.is_deleted = True
-    db.commit()
-
-    return {"message": "Project deleted successfully"}
-
-
-    audit = AuditLog(
+    return project_service.delete_project(
+        project_id=project_id,
         user_id=current_user.id,
-        action="CREATE_PROJECT",
-        target_type="PROJECT",
-        target_id=project.id
-    )   
-    db.add(audit)
-    db.commit()  
+        db=db
+    )

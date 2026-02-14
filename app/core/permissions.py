@@ -7,26 +7,12 @@ from app.utils.enums import ProjectRole
 
 
 permission_map = {
-    "create_task": [
-        ProjectRole.OWNER.value,
-        ProjectRole.ADMIN.value,
-        ProjectRole.MEMBER.value
-    ],
-    "update_task": [
-        ProjectRole.OWNER.value,
-        ProjectRole.ADMIN.value,
-        ProjectRole.MEMBER.value
-    ],
-    "delete_task": [
-        ProjectRole.OWNER.value,
-        ProjectRole.ADMIN.value
-    ],
-    "delete_project": [
-        ProjectRole.OWNER.value
-    ],
-    "add_member": [
-        ProjectRole.OWNER.value
-    ],
+    "delete_task":["OWNER", "ADMIN"],
+    "update_task":["OWNER", "ADMIN", "MEMBER"],
+    "create_task":["OWNER", "ADMIN", "MEMBER"],
+    "delete_project":["OWNER"],
+    "add_member":["OWNER"],
+    "update_project":["OWNER", "ADMIN"]
 }
 
 
@@ -50,8 +36,7 @@ def validate_role(action: str, membership):
     if not allowed_roles:
         raise HTTPException(status_code=400, detail="Invalid action")
 
-    if membership.role not in allowed_roles:
-        raise HTTPException(status_code=403, detail="Permission denied")
+   
 
 
 

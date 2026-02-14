@@ -1,43 +1,32 @@
-from fastapi import HTTPException
 from sqlalchemy.orm import Session
+from fastapi import HTTPException
+from datetime import datetime
 
 from app.db.models.task import Task
-from app.db.models.project import Project
-from app.utils.enums import TaskPriority
+from app.core.permissions import enforce_policy
 
 
 def create_task(
     project_id: int,
-    user_id: int,
     title: str,
     description: str | None,
     priority: str,
-    due_date,
+    user_id: int,
     db: Session
 ):
-    # 1️⃣ Ensure project exists
-    project = db.query(Project).filter(
-        Project.id == project_id,
-        Project.is_deleted == False
-    ).first()
-
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-   
-
-    # 3️⃣ Validate priority
-    if priority not in [p.value for p in TaskPriority]:
-        raise HTTPException(status_code=400, detail="Invalid priority")
-
-    # 4️⃣ Create task
-    task = Task(
+    enforce_policy(
+        action="create_task",
         project_id=project_id,
-        created_by=user_id,
+        user_id=user_id,
+        db=db
+    )
+
+    task = Task(
         title=title,
         description=description,
         priority=priority,
-        due_date=due_date
+        project_id=project_id,
+        created_by=user_id
     )
 
     db.add(task)
@@ -46,3 +35,68 @@ def create_task(
 
     return task
 
+
+def update_task(
+    project_id: int,
+    task_id: int,
+    title: str | None,
+    description: str | None,
+    status: str | None,
+    priority: str | None,
+    user_id: int,
+    db: Session
+):
+    enforce_policy(
+        action="update_task",
+        project_id=project_id,
+        user_id=user_id,
+        db=db,
+        resource_id=task_id
+    )
+
+    task = db.query(Task).filter(
+        Task.id == task_id,
+        Task.project_id == project_id
+    ).first()
+
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    if title:
+        task.title = title
+    if description:
+        task.description = description
+    if status:
+        task.status = status
+    if priority:
+        task.priority = priority
+
+    db.commit()
+    db.refresh(task)
+
+    return task
+
+
+def delete_task(
+    project_id: int,
+    task_id: int,
+    user_id: int,
+    db: Session
+):
+    enforce_policy(
+        action="delete_task",
+        project_id=project_id,
+        user_id=user_id,
+        db=db
+    )
+
+    task = db.query(Task).filter(
+        Task.id == task_id,
+        Task.project_id == project_id
+    ).first()
+
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    db.delete(task)
+    db.commit()
