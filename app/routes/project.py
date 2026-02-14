@@ -108,3 +108,5 @@ def delete_project(
 
 
 # discipline 1: project management
+# discipline 2: HR management  
+
