@@ -61,35 +61,15 @@ def update_project(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    enforce_policy(
-        action="update_project",
+    return project_service.update_project(
         project_id=project_id,
+        name=name,
+        description=description,
         user_id=current_user.id,
         db=db
     )
 
-    project = db.query(Project).filter(
-        Project.id == project_id,
-        Project.is_deleted == False
-    ).first()
-
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
-    if name:
-        project.name = name
-
-    if description:
-        project.description = description
-
-    db.commit()
-    db.refresh(project)
-
-    return {
-        "project_id": project.id,
-        "name": project.name,
-        "description": project.description
-    }
+   
 
 
 
