@@ -99,3 +99,6 @@ def delete_project(
 
 # router.get("/{project_id}/members") - list members
 # router.post("/{project_id}/members") - add member
+
+
+# router.delete("/{project_id}/members/{member_id}") - remove member
