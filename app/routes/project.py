@@ -69,6 +69,7 @@ def update_project(
         db=db
     )
 
+
    
 
 
@@ -93,3 +94,8 @@ def delete_project(
 # discipline 3: financial management
 
 
+
+
+
+# router.get("/{project_id}/members") - list members
+# router.post("/{project_id}/members") - add member
