@@ -102,3 +102,5 @@ def delete_project(
 
 
 # router.delete("/{project_id}/members/{member_id}") - remove member
+
+# router.get("/{project_id}/audit-logs") - list audit logs for project (admin only)
