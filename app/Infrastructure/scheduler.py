@@ -22,3 +22,5 @@ def start_scheduler():
 
 # This function deletes tasks that have been archived for more than 30 days
 
+
+# It returns the number of deleted tasks    
