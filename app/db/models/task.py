@@ -1,10 +1,9 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-
 from app.db.base_class import Base
-
-
+from sqlalchemy import Boolean
+from sqlalchemy.sql import func
 
 class Task(Base):
     __tablename__ = "tasks"
@@ -22,8 +21,14 @@ class Task(Base):
 
     due_date = Column(DateTime, nullable=True)
 
+    is_archived = Column(Boolean, default=False)
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    archived_at = Column(DateTime(timezone=True), nullable=True)
+
 
     project = relationship("Project", back_populates="tasks")
     creator = relationship("User")
+
+    

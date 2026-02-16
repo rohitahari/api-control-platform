@@ -5,6 +5,7 @@ from app.routes.project import router as project_router
 from app.routes.task import router as task_router
 from app.routes.audit import router as audit_router
 from app.routes.users import router as users_router
+from app.Infrastructure.scheduler import start_scheduler
 
 
 app = FastAPI()   # ← MUST be defined BEFORE include_router
@@ -21,3 +22,8 @@ app.include_router(users_router)
 @app.get("/")
 def health_check():
     return {"status": "Backend is running"}
+
+
+@app.on_event("startup")
+def startup_event():
+    start_scheduler()

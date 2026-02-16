@@ -1,102 +1,37 @@
-from sqlalchemy.orm import Session
-from fastapi import HTTPException
-from datetime import datetime
-
+from sqlalchemy import func
 from app.db.models.task import Task
-from app.core.permissions import enforce_policy
 
 
-def create_task(
-    project_id: int,
-    title: str,
-    description: str | None,
-    priority: str,
-    user_id: int,
-    db: Session
-):
-    enforce_policy(
-        action="create_task",
-        project_id=project_id,
-        user_id=user_id,
-        db=db
-    )
-
-    task = Task(
-        title=title,
-        description=description,
-        priority=priority,
-        project_id=project_id,
-        created_by=user_id
-    )
-
-    db.add(task)
-    db.commit()
-    db.refresh(task)
-
-    return task
-
-
-def update_task(
-    project_id: int,
-    task_id: int,
-    title: str | None,
-    description: str | None,
-    status: str | None,
-    priority: str | None,
-    user_id: int,
-    db: Session
-):
-    enforce_policy(
-        action="update_task",
-        project_id=project_id,
-        user_id=user_id,
-        db=db,
-        resource_id=task_id
-    )
-
-    task = db.query(Task).filter(
-        Task.id == task_id,
+def get_project_task_summary(project_id: int, db):
+    total = db.query(func.count(Task.id)).filter(
         Task.project_id == project_id
-    ).first()
+    ).scalar()
 
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
+    completed = db.query(func.count(Task.id)).filter(
+        Task.project_id == project_id,
+        Task.status == "DONE",
+        Task.is_archived == False
+    ).scalar()
 
-    if title:
-        task.title = title
-    if description:
-        task.description = description
-    if status:
-        task.status = status
-    if priority:
-        task.priority = priority
+    pending = db.query(func.count(Task.id)).filter(
+        Task.project_id == project_id,
+        Task.status != "DONE",
+        Task.is_archived == False
+    ).scalar()
 
-    db.commit()
-    db.refresh(task)
+    archived = db.query(func.count(Task.id)).filter(
+        Task.project_id == project_id,
+        Task.is_archived == True
+    ).scalar()
 
-    return task
+    completion_rate = 0
+    if total and total > 0:
+        completion_rate = round((completed / total) * 100, 2)
 
-
-def delete_task(
-    project_id: int,
-    task_id: int,
-    user_id: int,
-    db: Session
-):
-    enforce_policy(
-        action="delete_task",
-        project_id=project_id,
-        user_id=user_id,
-        db=db
-    )
-
-    task = db.query(Task).filter(
-        Task.id == task_id,
-        Task.project_id == project_id
-    ).first()
-
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-
-    db.delete(task)
-    db.commit()
+    return {
+        "total_tasks": total,
+        "completed": completed,
+        "pending": pending,
+        "archived": archived,
+        "completion_rate_percent": completion_rate
+    }

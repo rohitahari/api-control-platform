@@ -8,7 +8,7 @@ import os
 
 from app.db.session import get_db
 from app.db.models.user import User
-
+from passlib.context import CryptContext
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

@@ -12,7 +12,10 @@ permission_map = {
     "create_task":["OWNER", "ADMIN", "MEMBER"],
     "delete_project":["OWNER"],
     "add_member":["OWNER"],
-    "update_project":["OWNER", "ADMIN"]
+    "update_project":["OWNER", "ADMIN"],
+    "view_archived_tasks":["OWNER", "ADMIN"],
+    "restore_task":["OWNER", "ADMIN"],
+    "archive_task":["OWNER", "ADMIN", "MEMBER"]
 }
 
 
