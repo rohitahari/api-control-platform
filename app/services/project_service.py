@@ -9,33 +9,26 @@ from app.utils.enums import ProjectRole
 from app.core.permissions import enforce_policy
 
 
+def get_project(project_id: int, user_id: int, db: Session):
+    project = db.query(Project).filter(
+        Project.id == project_id,
+        Project.is_deleted == False
+    ).first()
 
-def create_project(name: str, description: str | None, user_id: int, db: Session):
-    project = Project(name=name, description=description)
-    db.add(project)
-    db.flush()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
 
-    membership = ProjectMember(
+    enforce_policy(
+        action="view_project",
+        project_id=project_id,
         user_id=user_id,
-        project_id=project.id,
-        role=ProjectRole.OWNER.value
+        db=db
     )
-    db.add(membership)
-
-    audit = AuditLog(
-        user_id=user_id,
-        action="CREATE_PROJECT",
-        target_type="PROJECT",
-        target_id=project.id
-    )
-    db.add(audit)
-
-    db.commit()
-    db.refresh(project)
 
     return {
         "project_id": project.id,
-        "name": project.name
+        "name": project.name,
+        "description": project.description
     }
 
 

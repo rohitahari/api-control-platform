@@ -6,11 +6,35 @@ from app.db.models.project import Project
 from app.core.security import get_current_user
 from app.services import project_service
 from app.core.permissions import enforce_policy
+from app.schema.project import ProjectResponse, ProjectCreate
+
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
 
-@router.post("/")
+
+
+
+
+
+
+
+
+@router.get("/{project_id}", response_model=ProjectResponse)
+def get_project(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return project_service.get_project(
+        project_id=project_id,
+        user_id=current_user.id,
+        db=db
+    )
+
+
+
+@router.post("/", response_model=ProjectResponse)
 def create_project(
     name: str,
     description: str | None = None,
@@ -20,6 +44,22 @@ def create_project(
     return project_service.create_project(
         name=name,
         description=description,
+        user_id=current_user.id,
+        db=db
+    )
+
+
+
+@router.post("/", response_model=ProjectResponse)
+def create_project(
+    payload: ProjectCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+
+):
+    return project_service.create_project(
+        name=payload.name,
+        description=payload.description,
         user_id=current_user.id,
         db=db
     )
@@ -104,3 +144,10 @@ def delete_project(
 # router.delete("/{project_id}/members/{member_id}") - remove member
 
 # router.get("/{project_id}/audit-logs") - list audit logs for project (admin only)
+
+
+
+from app.schema.project import (
+    ProjectCreate,
+    ProjectResponse
+)

@@ -5,6 +5,8 @@ from app.db.base_class import Base
 from sqlalchemy import Boolean
 from sqlalchemy.sql import func
 
+
+
 class Task(Base):
     __tablename__ = "tasks"
 
@@ -30,5 +32,26 @@ class Task(Base):
 
     project = relationship("Project", back_populates="tasks")
     creator = relationship("User")
+
+
+
+class TaskComment(Base):
+    __tablename = "task_comments"
+
+    id = Column(Integer, primary_key=True)
+
+    project_id = Column(Integer,ForeignKey("projects.id"),nullable=False)
+
+    task_id = Column(Integer,ForeignKey("tasks.id:"),nullable= False)
+    created_by = Column(Integer,ForeignKey("users.id"), nullable=False)
+
+    content = Column(String, nullable =False)
+
+
+    is_deleted = Column(Boolean, default=False, nullable=False)
+
+    created_by = Column(DateTime(timezone=True),service_default=func.now())
+    updated_at = Column(DateTime(timezone =True),onupdate=func.now())
+
 
     
