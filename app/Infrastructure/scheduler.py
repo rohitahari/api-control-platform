@@ -16,3 +16,9 @@ def start_scheduler():
 
     scheduler.add_job(job, "interval", hours=6)
     scheduler.start()
+
+
+
+
+# This function deletes tasks that have been archived for more than 30 days
+
