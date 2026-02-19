@@ -11,3 +11,9 @@ class AuditLog(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     action = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+
+
+
+# audit logging
