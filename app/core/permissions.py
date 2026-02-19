@@ -38,6 +38,9 @@ def validate_role(action: str, membership):
 
     if not allowed_roles:
         raise HTTPException(status_code=400, detail="Invalid action")
+    
+    if membership.role not in allowed_roles:
+        raise HTTPException(status_code=403,detail="Insufficient permissions")
 
    
 

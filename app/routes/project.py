@@ -7,7 +7,8 @@ from app.core.security import get_current_user
 from app.services import project_service
 from app.core.permissions import enforce_policy
 from app.schema.project import ProjectResponse, ProjectCreate
-
+from app.core.exceptions import AppException
+from app.schema.project_schema import ProjectCreate, ProjectResponse
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
@@ -34,19 +35,23 @@ def get_project(
 
 
 
+
+
+
 @router.post("/", response_model=ProjectResponse)
 def create_project(
-    name: str,
-    description: str | None = None,
+    payload: ProjectCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     return project_service.create_project(
-        name=name,
-        description=description,
+        name=payload.name,
+        description=payload.description,
         user_id=current_user.id,
         db=db
     )
+
+
 
 
 
@@ -84,7 +89,12 @@ def get_project(
     ).first()
 
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+       raise AppException(
+    status_code=404,
+    error="PROJECT_NOT_FOUND",
+    message="Project not found"
+)
+
 
     return {
         "project_id": project.id,

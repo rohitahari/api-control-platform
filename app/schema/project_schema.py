@@ -1,14 +1,15 @@
 from pydantic import BaseModel
-from typing import Optional
-from app.schema.project import ProjectResponse, ProjectCreate, ProjectUpdate
+from pydantic import ConfigDict
+
+
+class ProjectCreate(BaseModel):
+    name: str
+    description: str | None = None
 
 
 class ProjectResponse(BaseModel):
-    project_id: int
+    id: int
     name: str
-    description: Optional[str] = None
+    description: str | None = None
 
-
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

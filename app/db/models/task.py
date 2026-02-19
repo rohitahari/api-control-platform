@@ -36,23 +36,22 @@ class Task(Base):
 
 
 class TaskComment(Base):
-    __tablename = "task_comments"
+    __tablename__ = "task_comments"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, index=True)
 
-    project_id = Column(Integer,ForeignKey("projects.id"),nullable=False)
+    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
 
-    task_id = Column(Integer,ForeignKey("tasks.id:"),nullable= False)
-    created_by = Column(Integer,ForeignKey("users.id"), nullable=False)
-
-    content = Column(String, nullable =False)
-
+    content = Column(String, nullable=False)
 
     is_deleted = Column(Boolean, default=False, nullable=False)
 
-    created_by = Column(DateTime(timezone=True),service_default=func.now())
-    updated_at = Column(DateTime(timezone =True),onupdate=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    task = relationship("Task")
+    creator = relationship("User")
 
     
 
