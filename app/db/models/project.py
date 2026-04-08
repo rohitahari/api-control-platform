@@ -28,3 +28,6 @@ tasks = relationship(
     back_populates="project",
     cascade="all, delete-orphan"
 )
+
+
+members = relationship("ProjectMember", back_populates="project")

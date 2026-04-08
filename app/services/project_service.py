@@ -1,71 +1,50 @@
 from sqlalchemy.orm import Session
-from fastapi import HTTPException
-
 
 from app.db.models.project import Project
 from app.db.models.project_member import ProjectMember
-from app.core.permissions import enforce_policy
-from app.core.exceptions import AppException
-
+from app.db.models.user import User
 from app.db.models.audit_log import AuditLog
 
-
-
+from app.core.permissions import enforce_policy
+from app.core.exceptions import AppException
 
 
 # ✅ CREATE PROJECT
 def create_project(name: str, description: str, user_id: int, db: Session):
-
-
-    # 1️⃣ Create project
     project = Project(
         name=name,
         description=description,
         is_deleted=False
     )
 
-
     db.add(project)
     db.commit()
     db.refresh(project)
 
-
-    # 2️⃣ Add creator as OWNER
+    # Add creator as OWNER
     membership = ProjectMember(
         project_id=project.id,
         user_id=user_id,
         role="owner"
     )
 
-
     db.add(membership)
     db.commit()
-
 
     return project
 
 
-
-
 # ✅ GET PROJECT
 def get_project(project_id: int, user_id: int, db: Session):
-
 
     project = db.query(Project).filter(
         Project.id == project_id,
         Project.is_deleted == False
     ).first()
 
-
     if not project:
-        raise AppException(
-            status_code=404,
-            error="PROJECT_NOT_FOUND",
-            message="Project not found"
-        )
+        raise AppException("Project not found", 404)
 
-
-    # Permission check (membership + RBAC/ABAC)
     enforce_policy(
         action="view_project",
         project_id=project_id,
@@ -73,35 +52,19 @@ def get_project(project_id: int, user_id: int, db: Session):
         db=db
     )
 
-
     return project
 
 
-
-
 # ✅ UPDATE PROJECT
-def update_project(
-    project_id: int,
-    name: str | None,
-    description: str | None,
-    user_id: int,
-    db: Session
-):
-
+def update_project(project_id: int, name, description, user_id: int, db: Session):
 
     project = db.query(Project).filter(
         Project.id == project_id,
         Project.is_deleted == False
     ).first()
 
-
     if not project:
-        raise AppException(
-            status_code=404,
-            error="PROJECT_NOT_FOUND",
-            message="Project not found"
-        )
-
+        raise AppException("Project not found", 404)
 
     enforce_policy(
         action="update_project",
@@ -110,31 +73,19 @@ def update_project(
         db=db
     )
 
-
-    if name is not None:
+    if name:
         project.name = name
 
-
-    if description is not None:
+    if description:
         project.description = description
-
 
     db.commit()
     db.refresh(project)
 
-
     return project
 
 
-
-
-# ✅ DELETE PROJECT (SOFT DELETE)
-from app.db.models.audit_log import AuditLog
-from app.core.exceptions import AppException
-from app.db.models.project import Project
-from sqlalchemy.orm import Session
-
-
+# ✅ DELETE PROJECT
 def delete_project(project_id: int, user_id: int, db: Session):
 
     project = db.query(Project).filter(
@@ -143,16 +94,10 @@ def delete_project(project_id: int, user_id: int, db: Session):
     ).first()
 
     if not project:
-        raise AppException(
-            status_code=404,
-            error="PROJECT_NOT_FOUND",
-            message="Project not found"
-        )
+        raise AppException("Project not found", 404)
 
-    # soft delete
     project.is_deleted = True
 
-    # audit log
     log = AuditLog(
         project_id=project.id,
         user_id=user_id,
@@ -162,5 +107,39 @@ def delete_project(project_id: int, user_id: int, db: Session):
     db.add(log)
     db.commit()
 
-    return {"message": "Project deleted successfully"}
+    return {"message": "Project deleted"}
 
+
+# ✅ ADD MEMBER (IMPORTANT FEATURE)
+def add_member(project_id: int, email: str, inviter_id: int, db: Session):
+
+    enforce_policy(
+        action="invite_member",
+        project_id=project_id,
+        user_id=inviter_id,
+        db=db
+    )
+
+    user = db.query(User).filter(User.email == email).first()
+
+    if not user:
+        raise AppException("User not found", 404)
+
+    existing = db.query(ProjectMember).filter(
+        ProjectMember.project_id == project_id,
+        ProjectMember.user_id == user.id
+    ).first()
+
+    if existing:
+        raise AppException("User already a member", 400)
+
+    member = ProjectMember(
+        project_id=project_id,
+        user_id=user.id,
+        role="member"
+    )
+
+    db.add(member)
+    db.commit()
+
+    return {"message": "User added to project"}

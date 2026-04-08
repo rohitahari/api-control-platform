@@ -22,3 +22,6 @@ class User(Base):
         cascade="all, delete-orphan"
     )
 
+
+    project_members = relationship("ProjectMember", back_populates="user")
+

@@ -1,26 +1,36 @@
-from fastapi import APIRouter, Depends, HTTPException
+from app.core.api_key_auth import get_user_from_api_key
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+
 from app.db.session import get_db
 from app.db.models.user import User
-from app.db.models.project import Project
 from app.core.security import get_current_user
+
 from app.services import project_service
-from app.core.permissions import enforce_policy
-from app.schema.project import ProjectResponse, ProjectCreate
-from app.core.exceptions import AppException
 from app.schema.project_schema import ProjectCreate, ProjectResponse
+from app.utils.response import success_response
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
 
+# ✅ CREATE PROJECT
+@router.post("/", response_model=ProjectResponse)
+def create_project(
+    payload: ProjectCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    project = project_service.create_project(
+        name=payload.name,
+        description=payload.description,
+        user_id=current_user.id,
+        db=db
+    )
+
+    return project
 
 
-
-
-
-
-
-
+# ✅ GET PROJECT
 @router.get("/{project_id}", response_model=ProjectResponse)
 def get_project(
     project_id: int,
@@ -34,80 +44,12 @@ def get_project(
     )
 
 
-
-
-
-
-@router.post("/", response_model=ProjectResponse)
-def create_project(
-    payload: ProjectCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    return project_service.create_project(
-        name=payload.name,
-        description=payload.description,
-        user_id=current_user.id,
-        db=db
-    )
-
-
-
-
-
-@router.post("/", response_model=ProjectResponse)
-def create_project(
-    payload: ProjectCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-
-):
-    return project_service.create_project(
-        name=payload.name,
-        description=payload.description,
-        user_id=current_user.id,
-        db=db
-    )
-
-
-@router.get("/{project_id}")
-def get_project(
-    project_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    enforce_policy(
-        action="update_project",   # membership check only
-        project_id=project_id,
-        user_id=current_user.id,
-        db=db
-    )
-
-    project = db.query(Project).filter(
-        Project.id == project_id,
-        Project.is_deleted == False
-    ).first()
-
-    if not project:
-       raise AppException(
-    status_code=404,
-    error="PROJECT_NOT_FOUND",
-    message="Project not found"
-)
-
-
-    return {
-        "project_id": project.id,
-        "name": project.name,
-        "description": project.description
-    }
-
-
+# ✅ UPDATE PROJECT
 @router.patch("/{project_id}")
 def update_project(
     project_id: int,
-    name: str | None = None,
-    description: str | None = None,
+    name: str = None,
+    description: str = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -120,10 +62,7 @@ def update_project(
     )
 
 
-   
-
-
-
+# ✅ DELETE PROJECT
 @router.delete("/{project_id}")
 def delete_project(
     project_id: int,
@@ -137,27 +76,23 @@ def delete_project(
     )
 
 
-
-# discipline 1: project management
-# discipline 2: HR management  
-
-# discipline 3: financial management
-
-
-
-
-
-# router.get("/{project_id}/members") - list members
-# router.post("/{project_id}/members") - add member
-
-
-# router.delete("/{project_id}/members/{member_id}") - remove member
-
-# router.get("/{project_id}/audit-logs") - list audit logs for project (admin only)
+# ✅ INVITE USER (NEW FEATURE)
+@router.post("/{project_id}/invite")
+def invite_user(
+    project_id: int,
+    email: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return project_service.add_member(
+        project_id=project_id,
+        email=email,
+        inviter_id=current_user.id,
+        db=db
+    )
 
 
 
-from app.schema.project import (
-    ProjectCreate,
-    ProjectResponse
-)
+@router.get("/api-key-test")
+def api_key_test(user_id: int = Depends(get_user_from_api_key)):
+    return {"message": "API key working", "user_id": user_id}

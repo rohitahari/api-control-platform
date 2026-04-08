@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from app.routes.api_key import router as api_key_router
 
 from app.routes.auth import router as auth_router
 from app.routes.project import router as project_router
@@ -17,20 +18,53 @@ from fastapi.exceptions import HTTPException
 from app.schema.error_schema import ErrorResponse, ErrorDetail
 
 
+app = FastAPI(
+    title="SAAS Backend API",
+    docs_url=None if settings.is_production else "/docs",
+    redoc_url= None if settings.is_production else "/redoc"
+)   # ← MUST be defined BEFORE include_router
+
+
+
+
+from app.routes.api_key import router as api_key_router
+
+
+
+
+
+
+
+
+from app.core.exceptions import (
+    app_exception_handler,
+    http_exception_handler,
+    validation_exception_handler,
+    AppException
+)
+
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+
+app.add_exception_handler(AppException, app_exception_handler)
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+
+
 if settings.ENV =="prod":
     app = FastAPI(docs_url=None,redoc_url = None)
 else:
     app =FastAPI()
 
-app = FastAPI()   # ← MUST be defined BEFORE include_router
 
 
 
-app.include_router(auth_router)
-app.include_router(project_router)
-app.include_router(task_router)
-app.include_router(audit_router)
-app.include_router(users_router)
+app.include_router(auth_router, prefix="/api/v1/auth")
+app.include_router(project_router, prefix="/api/v1/projects")
+app.include_router(task_router, prefix="/api/v1/tasks")
+app.include_router(api_key_router, prefix="/api/v1/api-keys", tags=["API Keys"])
+
 
 
 @app.get("/")
@@ -77,3 +111,24 @@ async def custom_app_exception_handler(request: Request, exc: AppException):
             }
         }
     )
+
+
+
+
+from fastapi.responses import JSONResponse
+from fastapi import Request
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "message": str(exc),
+            "data": None
+        },
+    )
+
+
+docs_url="/docs"

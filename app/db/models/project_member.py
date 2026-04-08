@@ -4,28 +4,23 @@ from sqlalchemy.sql import func
 
 from app.db.base_class import Base
 
-from app.utils.enums import ProjectRole
 
 class ProjectMember(Base):
     __tablename__ = "project_members"
 
     id = Column(Integer, primary_key=True, index=True)
 
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
 
+    role = Column(String, default="member")
 
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-
-    role = Column(String, default=ProjectRole.MEMBER.value, nullable=False)
-
-
-    joined_at = Column(DateTime(timezone=True), server_default=func.now())
+    # ✅ RELATIONSHIPS (THIS WAS MISSING)
+    user = relationship("User", back_populates="project_members")
+    project = relationship("Project", back_populates="members")
 
     __table_args__ = (
-        UniqueConstraint("user_id", "project_id", name="unique_user_project"),
+        UniqueConstraint("project_id", "user_id", name="unique_project_user"),
     )
-
-    # Relationships
-    user = relationship("User", back_populates="memberships")
-    project = relationship("Project", back_populates="members")

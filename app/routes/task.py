@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from app.utils.response import success_response
 
 from app.core.permissions import enforce_policy
 from app.db.base_class import Base
@@ -9,7 +10,9 @@ from app.core.security import get_current_user
 from app.services import task_service
 from sqlalchemy import Column,Boolean, ForeignKey, Integer, String, Text
 
-router = APIRouter(prefix="/projects", tags=["Projects"])
+from fastapi import APIRouter
+
+router = APIRouter()
 
 
 @router.post("/{project_id}/tasks")
