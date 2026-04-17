@@ -6,7 +6,7 @@ from app.routes.project import router as project_router
 from app.routes.task import router as task_router
 from app.routes.audit import router as audit_router
 from app.routes.users import router as users_router
-from app.Infrastructure.scheduler import start_scheduler
+from app.infrastructure.scheduler import start_scheduler
 
 from app.core.config import settings
 
@@ -20,8 +20,8 @@ from app.schema.error_schema import ErrorResponse, ErrorDetail
 
 app = FastAPI(
     title="SAAS Backend API",
-    docs_url=None if settings.is_production else "/docs",
-    redoc_url= None if settings.is_production else "/redoc"
+    docs_url=None if settings.ENV == "prod" else "/docs",
+    redoc_url=None if settings.ENV == "prod" else "/redoc"
 )   # ← MUST be defined BEFORE include_router
 
 

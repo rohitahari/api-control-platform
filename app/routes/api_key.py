@@ -1,3 +1,4 @@
+from app.db.models import api_key
 from fastapi import APIRouter, Depends, Security
 from sqlalchemy.orm import Session
 
@@ -35,9 +36,18 @@ def api_key_test(current_key=Security(get_user_from_api_key)):
 
 
 @router.get("/usage")
-def get_usage(api_key=Security(get_user_from_api_key)):
+def get_usage(
+    current_key=Security(get_user_from_api_key),
+    db: Session = Depends(get_db)
+):
+    if not current_key:
+        return {"error": "API key not found"}
+
+    key = db.query(ApiKey).filter(ApiKey.user_id == current_key["user_id"]).first()
+
     return {
-        "requests_count": api_key.requests_count,
-        "last_request_at": api_key.last_request_at,
-        "plan": api_key.plan
+        "key": key.key,
+        "last_used_at": key.last_request_at,
+        "usage_count": key.requests_count
     }
+
