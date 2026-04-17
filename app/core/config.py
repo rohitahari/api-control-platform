@@ -7,3 +7,8 @@ class Settings(BaseSettings):
     ENV: str = "dev"
 
     model_config = SettingsConfigDict(env_file=".env")
+
+
+
+
+settings = Settings()
