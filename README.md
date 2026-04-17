@@ -165,37 +165,21 @@ app/
 
 ---
 
-## ⚙️ Setup
+## 🚀 Setup
 
-### 1. Clone repo
+```bash
+git clone <repo>
+cd api-control-platform
 
-```
-git clone https://github.com/your-username/saas-api-platform.git
-cd saas-api-platform
-```
-
-### 2. Create virtual environment
-
-```
 python -m venv venv
 source venv/bin/activate
-```
 
-### 3. Install dependencies
-
-```
 pip install -r requirements.txt
-```
 
-### 4. Setup environment variables
+cp .env.example .env
+# fill values
 
-Create `.env` from `.env.example`
-
-### 5. Run server
-
-```
-uvicorn app.main:app --reload --port 8001
-```
+uvicorn app.main:app --reload
 
 ---
 
