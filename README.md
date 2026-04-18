@@ -1,5 +1,21 @@
 # 🔐 SaaS API Key & Rate Limiting Platform
 
+## 🎥 Demo
+
+Click below to watch the demo:
+
+👉 https://www.loom.com/share/7006b1576cb74833b8628bb0db300c5a
+
+## 📌 What This Demo Shows
+
+- User authentication  
+- API key generation  
+- Rate limiting (prevents abuse)  
+- Usage tracking  
+
+This system adds a control layer to APIs to keep them secure and stable.
+
+
 A production-style backend system built with FastAPI that provides:
 
 * API key authentication
